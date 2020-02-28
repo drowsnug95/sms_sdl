@@ -1,11 +1,104 @@
 
 #include "scaler.h"
+#include <stdio.h>
 
 /* Not*/
 
 #define AVERAGE(z, x) ((((z) & 0xF7DEF7DE) >> 1) + (((x) & 0xF7DEF7DE) >> 1))
 #define AVERAGEHI(AB) ((((AB) & 0xF7DE0000) >> 1) + (((AB) & 0xF7DE) << 15))
 #define AVERAGELO(CD) ((((CD) & 0xF7DE) >> 1) + (((CD) & 0xF7DE0000) >> 17))
+
+#define RSHIFT(X) (((X) & 0xF7DE) >>1)
+void upscale_160x144_to_212x160(uint16_t* restrict src, uint16_t* restrict dst){    
+    uint16_t* __restrict__ buffer_mem;
+    uint16_t* d = dst;
+    const uint16_t ix=3, iy=9;
+    
+    for (int y = 0; y < 144; y+=iy)
+    {
+        d+=14;
+        int x =48;
+        buffer_mem = &src[y * 256];
+        for(int w =0; w < 160/3; w++)
+        {
+            uint16_t a[9],b[9],c[9];
+            for(int i =0; i < 9; i++){
+                a[i]=RSHIFT(buffer_mem[x + 256 * i]);
+                b[i]=RSHIFT(buffer_mem[x + 256 * i + 1]);
+                c[i]=RSHIFT(buffer_mem[x + 256 * i + 2]);
+            }
+            //A0~A9
+            *d         = a[0]<<1;
+            *(d+240)   = a[1] + RSHIFT(a[1] + RSHIFT(a[1]+ a[0]));
+            *(d+240*2) = a[2] + RSHIFT(a[1] + a[2]);
+            *(d+240*3) = a[3] + RSHIFT(a[2] + RSHIFT(a[2] + a[3]));
+            *(d+240*4) = a[4] + RSHIFT(a[3] + RSHIFT(a[3] + RSHIFT(a[3] + a[4])));
+            *(d+240*5) = a[4] + RSHIFT(a[5] + RSHIFT(a[5] + RSHIFT(a[5] + a[4])));
+            *(d+240*6) = a[5] + RSHIFT(a[6] + RSHIFT(a[5] + a[6]));
+            *(d+240*7) = a[6] + RSHIFT(a[6] + a[7]);
+            *(d+240*8) = a[7] + RSHIFT(a[7] + RSHIFT(a[7] + a[8]));
+            *(d+240*9) = a[8]<<1;
+            d++;
+            
+        //B9~B9
+            *d         = b[0] +RSHIFT(a[0] + RSHIFT(a[0] +  b[0]));
+            *(d+240)   = b[1] + RSHIFT(a[1] + RSHIFT(b[1] + RSHIFT(a[1] + b[0])));
+            *(d+240*2) = b[2] + RSHIFT(a[2] + RSHIFT(b[1] + RSHIFT(b[2] + a[1])));
+            *(d+240*3) = RSHIFT(a[3] + b[2]) + RSHIFT(b[3] + RSHIFT(a[2] + b[3]));
+            *(d+240*4) = RSHIFT(b[3] + b[4]) + RSHIFT(RSHIFT(a[3] + a[4]) + RSHIFT(b[4] + RSHIFT(a[4] + b[3])));
+            *(d+240*5) = RSHIFT(b[4] + b[5]) +RSHIFT(RSHIFT(a[4] + a[5]) + RSHIFT(b[4] + RSHIFT(b[5] + a[4])));
+            *(d+240*6) = RSHIFT(a[5] + b[5]) + RSHIFT(b[6] + RSHIFT(a[6] + b[5]));
+            *(d+240*7) = b[6] + RSHIFT(a[6]+ RSHIFT(b[7] + RSHIFT(a[7] + b[6])));
+            *(d+240*8) = b[7] + RSHIFT(a[7] + RSHIFT(b[7] + RSHIFT(b[8] + a[7])));
+            *(d+240*9) = b[8] + RSHIFT(a[8] + RSHIFT(a[8] + b[8]));
+            d++;
+        //C0~C9
+            *d         = b[0] + RSHIFT(c[0] + RSHIFT(c[0] + b[0]));
+            *(d+240)   = b[1] + RSHIFT(c[1] + RSHIFT(b[1] + RSHIFT(c[1] + b[0])));
+            *(d+240*2) = b[2] + RSHIFT(c[2] + RSHIFT(b[1] + RSHIFT(b[2] + c[1])));
+            *(d+240*3) = RSHIFT(c[3] + b[2]) + RSHIFT(b[3] + RSHIFT(c[2] + b[3]));
+            *(d+240*4) = RSHIFT(b[3] + b[4]) + RSHIFT(RSHIFT(b[4] + c[3]) + RSHIFT(c[4] + RSHIFT(c[4] + b[3])));
+            *(d+240*5) = RSHIFT(b[4] + b[5]) + RSHIFT(RSHIFT(b[4] + c[4]) + RSHIFT(c[5] + RSHIFT(b[5] + c[4])));
+            *(d+240*6) = RSHIFT(b[5] + b[6]) + RSHIFT(c[5] + RSHIFT(c[6] + b[5]));
+            *(d+240*7) = b[6] + RSHIFT(c[6] + RSHIFT(b[7] + RSHIFT(c[7] + b[6])));
+            *(d+240*8) = b[7] + RSHIFT(c[7] + RSHIFT(b[7] + RSHIFT(c[7] + b[8])));
+            *(d+240*9) = b[8] + RSHIFT(c[8] + RSHIFT(c[8] + b[8]));
+            d++;
+       //D0~D9
+            *d         = c[0]<<1;
+            *(d+240)   = c[1] + RSHIFT(c[1] + RSHIFT(c[1] + c[0]));
+            *(d+240*2) = c[2] + RSHIFT(c[1] + c[2]);
+            *(d+240*3) = c[3] + RSHIFT(c[2] + RSHIFT(c[2] + c[3]));
+            *(d+240*4) = c[4] + RSHIFT(c[3] + RSHIFT(c[3] + RSHIFT(c[3] + c[4])));
+            *(d+240*5) = c[4] + RSHIFT(c[5] + RSHIFT(c[5] + RSHIFT(c[5] + c[4])));
+            *(d+240*6) = c[5] + RSHIFT(c[6] + RSHIFT(c[5] + c[6]));
+            *(d+240*7) = c[6] + RSHIFT(c[6] + c[7]);
+            *(d+240*8) = c[7] + RSHIFT(c[7] + RSHIFT(c[7] + c[8]));
+            *(d+240*9) = c[8]<<1;
+            d++;
+            x += ix;
+        }
+        //last one line
+        uint16_t a[9];
+        for(int i =0; i < 9; i++){
+            a[i]=RSHIFT(buffer_mem[x + 256 * i]);
+        }
+        //A0~A9
+        *d         = a[0]<<1;
+        *(d+240)   = a[1] + RSHIFT(a[1] + RSHIFT(a[1]+ a[0]));
+        *(d+240*2) = a[2] + RSHIFT(a[1] + a[2]);
+        *(d+240*3) = a[3] + RSHIFT(a[2] + RSHIFT(a[2] + a[3]));
+        *(d+240*4) = a[4] + RSHIFT(a[3] + RSHIFT(a[3] + RSHIFT(a[3] + a[4])));
+        *(d+240*5) = a[4] + RSHIFT(a[5] + RSHIFT(a[5] + RSHIFT(a[5] + a[4])));
+        *(d+240*6) = a[5] + RSHIFT(a[6] + RSHIFT(a[5] + a[6]));
+        *(d+240*7) = a[6] + RSHIFT(a[6] + a[7]);
+        *(d+240*8) = a[7] + RSHIFT(a[7] + RSHIFT(a[7] + a[8]));
+        *(d+240*9) = a[8]<<1;
+        
+        d+=14 + 240 * 9;
+    }
+}
+
 
 /* alekmaul's scaler taken from mame4all */
 void bitmap_scale(uint32_t startx, uint32_t starty, uint32_t viswidth, uint32_t visheight, uint32_t newwidth, uint32_t newheight,uint32_t pitchsrc,uint32_t pitchdest, uint16_t* restrict src, uint16_t* restrict dst)

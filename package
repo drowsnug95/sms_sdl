@@ -19,7 +19,7 @@ esac
 print '[Desktop Entry]
 Type=Application
 Name=SMS Plus GX
-Comment=SMS/GG/SG emulator
+Comment=SMS/GG/SG Emulator
 Exec=sms_sdl %f
 Icon=sms
 Terminal=false

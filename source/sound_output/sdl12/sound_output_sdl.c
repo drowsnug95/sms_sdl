@@ -109,6 +109,7 @@ void Sound_Init()
 	aspec.callback = (mutex ? sdl_callback_m : sdl_callback);
 	aspec.userdata = NULL;
 
+    printf("Initializing Sound. FREQ:%d, BUFF:%d\n",SOUND_FREQUENCY, SOUND_SAMPLES_SIZE);
 	/* initialize the SDL Audio system */
 	if (SDL_InitSubSystem (SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE)) 
 	{

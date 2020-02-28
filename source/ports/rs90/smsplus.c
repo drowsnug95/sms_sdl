@@ -24,7 +24,7 @@ static char home_path[256];
 static uint8_t selectpressed = 0;
 static uint8_t save_slot = 0;
 static uint8_t quit = 0;
-static const uint32_t upscalers_available = 1;
+static const uint32_t upscalers_available = 2;
 
 static void video_update(void)
 {
@@ -32,9 +32,10 @@ static void video_update(void)
 	SDL_LockSurface(sdl_screen);
 	switch(option.fullscreen)
 	{
-		case 0:
-		if(sms.console == CONSOLE_GG) 
+		case 0: //Scale Native
+		if(sms.console == CONSOLE_GG) {
 			bitmap_scale(48,0,160,144,160,144,256,HOST_WIDTH_RESOLUTION-160,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels+(HOST_WIDTH_RESOLUTION-160)/2+(HOST_HEIGHT_RESOLUTION-144)/2*HOST_WIDTH_RESOLUTION);
+        }
 		else
 		{
 			uint32_t hide_left = (vdp.reg[0] & 0x20) ? 1 : 0;
@@ -44,7 +45,7 @@ static void video_update(void)
 			bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
 		}
 		break;
-		case 1:
+		case 1: //Scale Full
 		if(sms.console == CONSOLE_GG) 
 		{
 			dst_x = 48;
@@ -58,8 +59,22 @@ static void video_update(void)
 			dst_w = (hide_left ? 248 : 256);
 			dst_h = vdp.height;
 		}
-		bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+            bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
 		break;
+        case 2:  //Scale 4:3 for GG
+		if(sms.console == CONSOLE_GG) 
+            upscale_160x144_to_212x160((uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+        else
+		{
+			uint32_t hide_left = (vdp.reg[0] & 0x20) ? 1 : 0;
+			dst_x = hide_left ? 8 : 0;
+			dst_w = (hide_left ? 248 : 256);
+			dst_h = vdp.height;
+            bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+		}
+            
+        break;
+            
 	}
 	SDL_UnlockSurface(sdl_screen);	
 	SDL_Flip(sdl_screen);
@@ -78,7 +93,10 @@ void smsp_state(uint8_t slot_number, uint8_t mode)
 			if (fd) {
 				system_save_state(fd);
 				fclose(fd);
+                printf("State Saved. >%s\n",stpath);
 			}
+            else
+                printf("State Save Failed! >%s\n",stpath);
 			break;
 		
 		case 1:
@@ -86,7 +104,10 @@ void smsp_state(uint8_t slot_number, uint8_t mode)
 			if (fd) {
 				system_load_state(fd);
 				fclose(fd);
+                printf("State Saved. >%s\n",stpath);
 			}
+            else
+                printf("State Save Failed! >%s\n",stpath);
 			break;
 	}
 }
@@ -105,7 +126,10 @@ void system_manage_sram(uint8_t *sram, uint8_t slot_number, uint8_t mode)
 				{
 					fwrite(sram, 0x8000, 1, fd);
 					fclose(fd);
+                    printf("SRAM Saved. >%s\n",gdata.sramfile);
 				}
+                else
+                    printf("SRAM Save Failed! >%s\n",gdata.sramfile);
 			}
 			break;
 		
@@ -116,9 +140,12 @@ void system_manage_sram(uint8_t *sram, uint8_t slot_number, uint8_t mode)
 				sms.save = 1;
 				fread(sram, 0x8000, 1, fd);
 				fclose(fd);
+                printf("SRAM Loaded. >%s\n",gdata.sramfile);
 			}
-			else
+			else{
+                printf("SRAM Load Failed! >%s\n",gdata.sramfile);
 				memset(sram, 0x00, 0x8000);
+            }
 			break;
 	}
 }
@@ -582,6 +609,9 @@ void Menu()
 				case 1:
 					print_string("Scaling : Stretched", TextBlue, 0, 5, 75, backbuffer->pixels);
 				break;
+                case 2:
+					print_string("Scaling : 4:3(GG Only)", TextBlue, 0, 5, 75, backbuffer->pixels);
+				break;
 			}
         }
         else
@@ -593,6 +623,9 @@ void Menu()
 				break;
 				case 1:
 					print_string("Scaling : Stretched", TextWhite, 0, 5, 75, backbuffer->pixels);
+				break;
+                case 2:
+					print_string("Scaling : 4:3(GG Only)", TextWhite, 0, 5, 75, backbuffer->pixels);
 				break;
 			}
         }
@@ -739,9 +772,12 @@ static void config_load()
 	{
 		fread(&option, sizeof(option), sizeof(int8_t), fp);
 		fclose(fp);
+        printf("Config loaded. >%s\n",config_path);
 	}
 	else
 	{
+        printf("Config NOT loaded. >%s\n",config_path);
+
 		/* Default mapping for the Bittboy in case loading configuration file fails */
 		option.config_buttons[CONFIG_BUTTON_UP] = 273;
 		option.config_buttons[CONFIG_BUTTON_DOWN] = 274;
@@ -771,7 +807,10 @@ static void config_save()
 	{
 		fwrite(&option, sizeof(option), sizeof(int8_t), fp);
 		fclose(fp);
+        printf("Config Saved. >%s\n",config_path);
 	}
+    else
+        printf("Config Save Failed! >%s\n",config_path);
 }
 
 

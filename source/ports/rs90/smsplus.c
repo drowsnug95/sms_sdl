@@ -24,7 +24,7 @@ static char home_path[256];
 static uint8_t selectpressed = 0;
 static uint8_t save_slot = 0;
 static uint8_t quit = 0;
-static const uint32_t upscalers_available = 2;
+static const uint32_t upscalers_available = 3;
 
 static void video_update(void)
 {
@@ -73,6 +73,18 @@ static void video_update(void)
             bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
 		}
             
+        break;
+        case 3:  //Subpixel Scale for GG
+		if(sms.console == CONSOLE_GG) 
+            upscale_160x144_to_212x144((uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+        else
+		{
+			uint32_t hide_left = (vdp.reg[0] & 0x20) ? 1 : 0;
+			dst_x = hide_left ? 8 : 0;
+			dst_w = (hide_left ? 248 : 256);
+			dst_h = vdp.height;
+            bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+		}       
         break;
             
 	}
@@ -575,28 +587,29 @@ void Menu()
 	char text[50];
     int16_t pressed = 0;
     int16_t currentselection = 1;
+
     SDL_Rect dstRect;
     SDL_Event Event;
     
-    while (((currentselection != 1) && (currentselection != 7)) || (!pressed))
+    while (((currentselection != 1) && (currentselection != 8)) || (!pressed))
     {
         pressed = 0;
  		SDL_FillRect( backbuffer, NULL, 0 );
 
 		print_string("SMS Plus GX", TextWhite, 0, 72, 15, backbuffer->pixels);
 		
-		if (currentselection == 1) print_string("Continue", TextBlue, 0, 5, 30, backbuffer->pixels);
-		else  print_string("Continue", TextWhite, 0, 5, 30, backbuffer->pixels);
+		if (currentselection == 1) print_string("Continue", TextBlue, 0, 5, 27, backbuffer->pixels);
+		else  print_string("Continue", TextWhite, 0, 5, 27, backbuffer->pixels);
 		
 		snprintf(text, sizeof(text), "Load State %d", save_slot);
 		
-		if (currentselection == 2) print_string(text, TextBlue, 0, 5, 45, backbuffer->pixels);
-		else print_string(text, TextWhite, 0, 5, 45, backbuffer->pixels);
+		if (currentselection == 2) print_string(text, TextBlue, 0, 5, 39, backbuffer->pixels);
+		else print_string(text, TextWhite, 0, 5, 39, backbuffer->pixels);
 		
 		snprintf(text, sizeof(text), "Save State %d", save_slot);
 		
-		if (currentselection == 3) print_string(text, TextBlue, 0, 5, 60, backbuffer->pixels);
-		else print_string(text, TextWhite, 0, 5, 60, backbuffer->pixels);
+		if (currentselection == 3) print_string(text, TextBlue, 0, 5, 51, backbuffer->pixels);
+		else print_string(text, TextWhite, 0, 5, 51, backbuffer->pixels);
 		
 
         if (currentselection == 4)
@@ -604,13 +617,16 @@ void Menu()
 			switch(option.fullscreen)
 			{
 				case 0:
-					print_string("Scaling : Native", TextBlue, 0, 5, 75, backbuffer->pixels);
+					print_string("Scaling : Native", TextBlue, 0, 5, 63, backbuffer->pixels);
 				break;
 				case 1:
-					print_string("Scaling : Stretched", TextBlue, 0, 5, 75, backbuffer->pixels);
+					print_string("Scaling : Stretched", TextBlue, 0, 5, 63, backbuffer->pixels);
 				break;
                 case 2:
-					print_string("Scaling : 4:3(GG Only)", TextBlue, 0, 5, 75, backbuffer->pixels);
+					print_string("Scaling : 4:3(GG Only)", TextBlue, 0, 5, 63, backbuffer->pixels);
+				break;
+                case 3:
+					print_string("Scaling : New 4:3(GG Only)", TextBlue, 0, 5, 63, backbuffer->pixels);
 				break;
 			}
         }
@@ -619,28 +635,35 @@ void Menu()
 			switch(option.fullscreen)
 			{
 				case 0:
-					print_string("Scaling : Native", TextWhite, 0, 5, 75, backbuffer->pixels);
+					print_string("Scaling : Native", TextWhite, 0, 5, 63, backbuffer->pixels);
 				break;
 				case 1:
-					print_string("Scaling : Stretched", TextWhite, 0, 5, 75, backbuffer->pixels);
+					print_string("Scaling : Stretched", TextWhite, 0, 5, 63, backbuffer->pixels);
 				break;
                 case 2:
-					print_string("Scaling : 4:3(GG Only)", TextWhite, 0, 5, 75, backbuffer->pixels);
+					print_string("Scaling : 4:3(GG Only)", TextWhite, 0, 5, 63, backbuffer->pixels);
+				break;
+                case 3:
+					print_string("Scaling : New 4:3(GG Only)", TextWhite, 0, 5, 63, backbuffer->pixels);
 				break;
 			}
         }
 
 		snprintf(text, sizeof(text), "Sound volume : %d", option.soundlevel);
 		
-		if (currentselection == 5) print_string(text, TextBlue, 0, 5, 90, backbuffer->pixels);
-		else print_string(text, TextWhite, 0, 5, 90, backbuffer->pixels);
+		if (currentselection == 5) print_string(text, TextBlue, 0, 5, 75, backbuffer->pixels);
+		else print_string(text, TextWhite, 0, 5, 75, backbuffer->pixels);
 		
-		if (currentselection == 6) print_string("Input remapping", TextBlue, 0, 5, 105, backbuffer->pixels);
-		else print_string("Input remapping", TextWhite, 0, 5, 105, backbuffer->pixels);
+		if (currentselection == 6) print_string("Input remapping", TextBlue, 0, 5, 87, backbuffer->pixels);
+		else print_string("Input remapping", TextWhite, 0, 5, 87, backbuffer->pixels);
 		
-		if (currentselection == 7) print_string("Quit", TextBlue, 0, 5, 125, backbuffer->pixels);
-		else print_string("Quit", TextWhite, 0, 5, 125, backbuffer->pixels);
-		
+		if (currentselection == 7) print_string("Reset", TextBlue, 0, 5, 99, backbuffer->pixels);
+		else print_string("Reset", TextWhite, 0, 5, 99, backbuffer->pixels);
+
+        if (currentselection == 8) print_string("Quit", TextBlue, 0, 5, 111, backbuffer->pixels);
+		else print_string("Quit", TextWhite, 0, 5, 111, backbuffer->pixels);
+
+        
 		print_string("By gameblabla, ekeeke", TextWhite, 0, 5, 145, backbuffer->pixels);
 
         while (SDL_PollEvent(&Event))
@@ -652,11 +675,11 @@ void Menu()
                     case SDLK_UP:
                         currentselection--;
                         if (currentselection == 0)
-                            currentselection = 7;
+                            currentselection = 8;
                         break;
                     case SDLK_DOWN:
                         currentselection++;
-                        if (currentselection == 8)
+                        if (currentselection == 9)
                             currentselection = 1;
                         break;
                     case SDLK_LCTRL:
@@ -718,6 +741,12 @@ void Menu()
         {
             switch(currentselection)
             {
+                case 7:
+                    //reset
+                    Sound_Close();
+                    Sound_Init();
+                    system_poweron();
+                    break;
 				case 6:
 					Input_Remapping();
 				break;
@@ -755,7 +784,7 @@ void Menu()
     SDL_Flip(sdl_screen);
     #endif
     
-    if (currentselection == 7)
+    if (currentselection == 8)
         quit = 1;
 }
 

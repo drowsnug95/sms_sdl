@@ -9,6 +9,40 @@
 #define AVERAGELO(CD) ((((CD) & 0xF7DE) >> 1) + (((CD) & 0xF7DE0000) >> 17))
 
 #define RSHIFT(X) (((X) & 0xF7DE) >>1)
+#define RMASK 0b1111100000000000
+#define GMASK 0b0000011111100000
+#define BMASK 0b0000000000011111
+
+void upscale_160x144_to_212x144(uint16_t* restrict src, uint16_t* restrict dst){    
+    uint16_t* __restrict__ buffer_mem;
+    uint16_t* d = dst + 240 * 8;
+    const uint16_t ix=3, iy=1;
+    
+    for (int y = 0; y < 144; y+=iy)
+    {
+        d+=14;
+        int x =48;
+        buffer_mem = &src[y * 256];
+        for(int w =0; w < 160/3; w++)
+        {
+            uint16_t r[3],g[3],b[3];
+            for(int i =0; i < 3; i++){
+                uint16_t p = buffer_mem[x + i];
+                r[i] = p & RMASK;
+                g[i] = p & GMASK;
+                b[i] = p & BMASK;
+            }
+            *d++ = r[0] | g[0] | b[0];
+            *d++ = r[0] | g[1] | b[1];
+            *d++ = r[1] | g[1] | b[2];
+            *d++ = r[2] | g[2] | b[2];
+            x += ix;
+        }
+        *d = buffer_mem[x];
+        d+=14;
+    }
+}
+
 void upscale_160x144_to_212x160(uint16_t* restrict src, uint16_t* restrict dst){    
     uint16_t* __restrict__ buffer_mem;
     uint16_t* d = dst;

@@ -48,9 +48,10 @@ static void video_update(void)
 		case 1: //Scale Full
 		if(sms.console == CONSOLE_GG) 
 		{
-			dst_x = 48;
-			dst_w = 160;
-			dst_h = 144;
+			//dst_x = 48;
+			//dst_w = 160;
+			//dst_h = 144;
+            upscale_160x144_to_240x160((uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
 		}
 		else
 		{
@@ -58,8 +59,8 @@ static void video_update(void)
 			dst_x = hide_left ? 8 : 0;
 			dst_w = (hide_left ? 248 : 256);
 			dst_h = vdp.height;
-		}
             bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+		}
 		break;
         case 2:  //Scale 4:3 for GG
 		if(sms.console == CONSOLE_GG) 
@@ -74,7 +75,7 @@ static void video_update(void)
 		}
             
         break;
-        case 3:  //Subpixel Scale for GG
+        case 3:  //Subpixel Scale for GG ( 4:3 New)
 		if(sms.console == CONSOLE_GG) 
             upscale_160x144_to_212x144((uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
         else

@@ -2,8 +2,6 @@
 #include "scaler.h"
 #include <stdio.h>
 
-/* Not*/
-
 #define AVERAGE(z, x) ((((z) & 0xF7DEF7DE) >> 1) + (((x) & 0xF7DEF7DE) >> 1))
 #define AVERAGEHI(AB) ((((AB) & 0xF7DE0000) >> 1) + (((AB) & 0xF7DE) << 15))
 #define AVERAGELO(CD) ((((CD) & 0xF7DE) >> 1) + (((CD) & 0xF7DE0000) >> 17))
@@ -13,6 +11,50 @@
 #define GMASK 0b0000011111100000
 #define BMASK 0b0000000000011111
 
+// Full scale up (New Subpixel math)
+void upscale_160x144_to_240x160(uint16_t* restrict src, uint16_t* restrict dst){    
+    uint16_t* __restrict__ buffer_mem;
+    uint16_t* d = dst;
+    const uint16_t ix=2, iy=9;
+    
+    for (int y = 0; y < 144; y+=iy)
+    {
+        int x =48;
+        buffer_mem = &src[y * 256];
+        for(int w =0; w < 160 / 2; w++)
+        {
+            uint16_t c[3][10];
+            for(int i=0; i<10; i++){
+                uint16_t r0,r1,g0,g1,b1,b2;
+                r0 = buffer_mem[x + i * 256]     & RMASK;
+                g0 = buffer_mem[x + i * 256]     & GMASK;
+                g1 = buffer_mem[x + i * 256 + 1] & GMASK;
+                b1 = buffer_mem[x + i * 256 + 1] & BMASK;
+
+                c[0][i] = buffer_mem[x + i * 256];
+                c[1][i] = r0 | (((g0 + g1)>>1) & GMASK) | b1;
+                c[2][i] = buffer_mem[x + i * 256 + 1];
+            }
+            for(int i = 0; i<3 ; i++){
+                *d            = c[i][0];
+                *(d +240)     = c[i][1];
+                *(d +240 * 2) = c[i][2];
+                *(d +240 * 3) = c[i][3];
+                *(d +240 * 4) = c[i][4];
+                *(d +240 * 5) = c[i][5];
+                *(d +240 * 6) = c[i][6];
+                *(d +240 * 7) = c[i][7];
+                *(d +240 * 8) = RSHIFT(c[i][7]) + RSHIFT(c[i][8]);
+                *(d +240 * 9) = c[i][8];
+                  d++;
+            }
+            x += ix;
+        }
+        d += 240 * 9;
+    }
+}
+
+// 4:3 scale up (New Subpixel math)
 void upscale_160x144_to_212x144(uint16_t* restrict src, uint16_t* restrict dst){    
     uint16_t* __restrict__ buffer_mem;
     uint16_t* d = dst + 240 * 8;
@@ -43,6 +85,7 @@ void upscale_160x144_to_212x144(uint16_t* restrict src, uint16_t* restrict dst){
     }
 }
 
+// 4:3 scaleup (blur)
 void upscale_160x144_to_212x160(uint16_t* restrict src, uint16_t* restrict dst){    
     uint16_t* __restrict__ buffer_mem;
     uint16_t* d = dst;

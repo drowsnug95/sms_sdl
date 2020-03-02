@@ -11,6 +11,42 @@
 #define GMASK 0b0000011111100000
 #define BMASK 0b0000000000011111
 
+//downscaling for rs-90
+void downscale_240x192to240x160(uint16_t* restrict src, uint16_t* restrict dst)
+{
+    uint16_t y=0;  //crop top 8 pixels
+    uint16_t* __restrict__ buffer_mem;
+ 
+    const uint16_t ix=1, iy=6;
+    
+    for(int H = 0; H < 160 / 4; H++)
+    {
+	    buffer_mem = &src[y*256];
+        uint16_t x = 8;  //crop left&right 8px
+        for(int W = 0; W < 240; W++) 
+        {
+            //Vertical Scaling (6px to 5px)
+            uint32_t a,b,c,d,e,f;
+            a = RSHIFT(buffer_mem[x]);
+            b = RSHIFT(buffer_mem[x+256]);
+            c = RSHIFT(buffer_mem[x+256*2]);
+            d = RSHIFT(buffer_mem[x+256*3]);
+            e = RSHIFT(buffer_mem[x+256*4]);
+            f = RSHIFT(buffer_mem[x+256*5]);
+            
+            *dst         = a + RSHIFT(a + RSHIFT(b + RSHIFT(b + a)));
+	        *(dst+240)   = b + RSHIFT(c + RSHIFT(b + c));
+	        *(dst+240*2) = c + d;
+	        *(dst+240*3) = e + RSHIFT(d + RSHIFT(d + e));
+            *(dst+240*4) = f + RSHIFT(f + RSHIFT(e + RSHIFT(e + f)));
+            dst++;
+            x += ix;
+        }
+        dst += 240*4;
+        y += iy;
+    }
+}
+
 // Full scale up (New Subpixel math)
 void upscale_160x144_to_240x160(uint16_t* restrict src, uint16_t* restrict dst){    
     uint16_t* __restrict__ buffer_mem;
@@ -44,7 +80,19 @@ void upscale_160x144_to_240x160(uint16_t* restrict src, uint16_t* restrict dst){
                 *(d +240 * 5) = c[i][5];
                 *(d +240 * 6) = c[i][6];
                 *(d +240 * 7) = c[i][7];
-                *(d +240 * 8) = RSHIFT(c[i][7]) + RSHIFT(c[i][8]);
+                uint16_t r0,g0,b0,r1,g1,b1;
+                r0 = c[i][7] & RMASK;
+                g0 = c[i][7] & GMASK;
+                b0 = c[i][7] & BMASK;
+                r1 = c[i][8] & RMASK;
+                g1 = c[i][8] & GMASK;
+                b1 = c[i][8] & BMASK;
+                *(d +240 * 8) = (((r0>>1) + (r1>>1))&RMASK) |
+                                (((g0 + g1)>>1)&GMASK) |
+                                (((b0 + b1)>>1)&BMASK);
+                *(d +240 * 8) = (((r0>>1) + (r1>>1))&RMASK) |
+                                (((g0 + g1)>>1)&GMASK) |
+                                (((b0 + b1)>>1)&BMASK);
                 *(d +240 * 9) = c[i][8];
                   d++;
             }

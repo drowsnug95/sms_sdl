@@ -55,11 +55,13 @@ static void video_update(void)
 		}
 		else
 		{
+            /*
 			uint32_t hide_left = (vdp.reg[0] & 0x20) ? 1 : 0;
 			dst_x = hide_left ? 8 : 0;
 			dst_w = (hide_left ? 248 : 256);
 			dst_h = vdp.height;
-            bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
+            bitmap_scale(dst_x,0,dst_w,dst_h,sdl_screen->w,sdl_screen->h,256,0,(uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);*/
+            downscale_240x192to240x160((uint16_t* restrict)sms_bitmap->pixels,(uint16_t* restrict)sdl_screen->pixels);
 		}
 		break;
         case 2:  //Scale 4:3 for GG
